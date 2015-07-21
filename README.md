@@ -8,3 +8,5 @@ This project was build just to test and learn how to properly use ngCordova Came
 
 It's currently under development and I will keep updating the code as I'm learing.
 The ideal project would be an app that takes any number of pictures in an Offline mode and then uploads all the images when the user gets online.
+
+*Note: I'll only add the www folder of the app to keep this clean.
