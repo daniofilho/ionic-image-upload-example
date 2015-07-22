@@ -12,11 +12,11 @@
     <link href="css/style.css" rel="stylesheet">
 
     <script src="lib/ionic/js/ionic.bundle.js"></script>
-	<script src="cordova.js"></script>
 	<script src="lib/ngCordova/dist/ng-cordova.js"></script>
+	<script src="cordova.js"></script>
 	<script src="js/app.js"></script>
   </head>
-  <body ng-app="cordova-camera" class="platform-ios platform-cordova platform-webview">
+  <body ng-app="cordova-camera">
 
     <ion-pane>
       
@@ -58,7 +58,13 @@
 	      	
       	</div>
       	<ion-scroll direction="x" style="height:200px; min-height: 200px; overflow: scroll; white-space: nowrap;">
-	      <img ng-repeat="image in images" ng-src="{{urlForImage(image)}}" style="height:200px; padding: 5px 5px 5px 5px;"/>
+	      
+	      <ul> 
+		      <li ng-repeat="image in images">
+		      	<p>image: {{image}}</p>
+			  	<p>url: {{urlForImage(image)}}
+		      </li>
+	      </ul>
 	    </ion-scroll>
     
       </ion-content>
