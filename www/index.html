@@ -10,15 +10,13 @@
 	
     <link href="lib/ionic/css/ionic.css" rel="stylesheet">
     <link href="css/style.css" rel="stylesheet">
-    <link href="lib/pace-progress-bar/pace-progress-bar.css" rel="stylesheet">
 
     <script src="lib/ionic/js/ionic.bundle.js"></script>
 	<script src="cordova.js"></script>
 	<script src="lib/ngCordova/dist/ng-cordova.js"></script>
-	<script src="lib/pace-progress-bar/pace-progress-bar.js"></script>
 	<script src="js/app.js"></script>
   </head>
-  <body ng-app="cordova-camera">
+  <body ng-app="cordova-camera" class="platform-ios platform-cordova platform-webview">
 
     <ion-pane>
       
@@ -46,18 +44,23 @@
 		      	<button 
 		      		ng-click="sendPicture()"
 		      		class="button button-block button-calm">
-		      		Enviar Foto
+		      		Enviar para API
 		      	</button>
 	      	</div>
 	      	
-	      	
+	      	<div class="padding">
+		      	<progress value="{{progressBar}}" max="100"></progress> 
+	      	</div>
 	      	
 	      	<div class="padding">
 		      	<p>{{liveConsole}}</p>
 	      	</div>
 	      	
       	</div>
-      	
+      	<ion-scroll direction="x" style="height:200px; min-height: 200px; overflow: scroll; white-space: nowrap;">
+	      <img ng-repeat="image in images" ng-src="{{urlForImage(image)}}" style="height:200px; padding: 5px 5px 5px 5px;"/>
+	    </ion-scroll>
+    
       </ion-content>
     </ion-pane>
   </body>
