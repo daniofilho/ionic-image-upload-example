@@ -2,17 +2,54 @@
 	
 	var app = angular.module('cordova-camera', ['ionic', 'ngCordova'] );
 	
+	app.config(function( $stateProvider, $urlRouterProvider ) {
+		
+		$stateProvider.state('home',{
+			url: '/home',
+			views: {
+				'tab-home': {
+					templateUrl: 'templates/home.html'
+				}
+			}
+		});
+		
+		$stateProvider.state('config',{
+			url: '/config',
+			views: {
+				'tab-config': {
+					templateUrl: 'templates/config.html'
+				}
+			}
+			
+		});
+		
+		$urlRouterProvider.otherwise('home');
+		
+	});
 	
 	app.controller('CameraCtrl', function($scope, $cordovaCamera, $timeout, $cordovaFileTransfer, $cordovaFile ) {
 		
 		//variables
-		$scope.pictureUrl = "https://placeimg.com/200/100";
 		$scope.picturePath = "";
+		$scope.lastImage = "http://placehold.it/200x100&text=sem.foto"; //just to preview the sent photo
+		
 		$scope.liveConsole = "Console:"; //variable acting as a console on app
+		
+		$scope.server = "http://daniofilho.com/estudo/ionic/upload-imagens/fn_upload.php";
+		
 		$scope.progressBar = 0;
 		$scope.retries = 0;
 		$scope.images = [];
- 
+		
+		//let user define quality and size
+		/*
+			Not working yet, I don't know how, but even if the user change the value, it does not auto change
+			on the scope... will look it later!	
+		*/
+		$scope.phtQuality = 90;
+		$scope.phtWidth = 1920;
+		$scope.phtHeight = 1080;
+		
 		//returns the path for the image
 	    $scope.urlForImage = function(imageName) {
 	        var name = imageName.substr(imageName.lastIndexOf('/') + 1);
@@ -25,10 +62,14 @@
 			
 			//options set up
 			var options = {
-				quality: 5,
+				quality: $scope.phtQuality,
 				pictureSource: navigator.camera.PictureSourceType.CAMERA,
 				destinationType: Camera.DestinationType.FILE_URL,
-				encodingType: Camera.EncodingType.JPEG
+				encodingType: Camera.EncodingType.JPEG,
+				targetWidth: $scope.phtWidth,
+				targetHeight: $scope.phtHeight,
+				saveToPhotoAlbum: false,
+				allowEdit : true
 			}
 			
 			//call the $cordovaCamera to take the picture
@@ -42,8 +83,10 @@
 					$scope.picturePath = data;
 					
 					//debug
-					$scope.liveConsole += " -- caminho da imagem: " + data + " -- ";
-					console.log(JSON.stringify(data));
+					$scope.liveConsole = "Tirando a foto";
+					console.log( 'tirando foto => q: ' + $scope.phtQuality + ' | w=' + $scope.phtWidth + ' | h=' + $scope.phtHeight );
+			
+					console.log("caminho da imagem: " + JSON.stringify(data));
 					console.log('resolvendo o filesystem...');
 					
 					//Retrieve a fileEntry based on it's local URL
@@ -57,16 +100,13 @@
 					console.log(JSON.stringify(error));
 				});
 			
-			/*
-			function createFileEntry(fileURI) {
-				window.resolveLocalFileSystemURL(fileURI, copyFile, fail);
-			}*/
 			
 			//copy the file to the location
 			function copyFile(fileEntry) {
 				
 				//debug
-				console.log('resolvido, resultado: ' + fileEntry );
+				$scope.liveConsole = "Preparando para copiar para local seguro";
+				console.log('resolvido, resultado: ' + fileEntry.fullPath );
 				
 				//make new file name
 				var name = fileEntry.fullPath.substr(fileEntry.fullPath.lastIndexOf('/') + 1);
@@ -87,7 +127,7 @@
 			function onCopySuccess(entry) {
 				
 				//debug
-				$scope.liveConsole = " -- arquivo movido: " + entry.nativeURL + " -- ";
+				$scope.liveConsole = "Copiado para local seguro";
 				console.log (" -- arquivo movido: " + entry.nativeURL + " -- ");
 				
 				//apply changes to #scope		
@@ -106,6 +146,7 @@
 			
 			//if fails, debug 
 			function fail(error) {
+				$scope.liveConsole = "Erro ao copiar:" + error.code;
 			 	console.log("fail: " + error.code);
 			}
 			
@@ -136,10 +177,10 @@
 				console.log( 'filename: ' + fileName );
 				console.log( 'cordova file:' + cordova.file.dataDirectory );
 				console.log( 'picturePath: ' +  $scope.picturePath);
-				$scope.liveConsole = " -- vou enviar a foto: " + $scope.picturePath + " -- ";
+				$scope.liveConsole = "preparando para enviar a foto";
 				
 				//server options		
-				var server = "http://daniofilho.com/estudo/ionic/upload-imagens/fn_upload.php";
+				var server = $scope.server;
 				
 				//set the filepath
 				var filePath = $scope.picturePath;
@@ -168,15 +209,23 @@
 					
 					//debug
 					console.log( 'enviando para: ' + encodeURI(server) );
+					$scope.liveConsole = "enviando";
 					
-					//the  action
-					var ft = new FileTransfer();
-					ft.upload(filePath, encodeURI(server), win, fail, options);
+					//the action / the magic
+					$cordovaFileTransfer.upload( encodeURI(server), filePath, options)
+					    .then(function(result) {
+						    uploadSucces(result);
+					    }, function(err) {
+					        uploadError(err);
+					    }, function (progress) {
+						    //updates the progressbar
+					        $scope.progressBar = (progress.loaded / progress.total) * 100;
+					    });
 					
 				}
 				
 				//if success
-				var win = function (r) {
+				var uploadSucces = function (result) {
 			        //will study this clearcache later
 			        //clearCache();
 			          
@@ -184,13 +233,26 @@
 			        $scope.retries  = 0;
 			        
 			        //debug
-			        $scope.liveConsole += " -- imagem enviada! -- ";
-			        console.log(JSON.stringify(result));
+			        console.log("Imagem enviada, retorno do server:" + JSON.stringify(result));
+					console.log(result.response);
+					
+					//return server message on console
+					$scope.liveConsole = result.response.msg;
+					
+					//put the image on the img tag to preview sent image
+					$scope.lastImage = result.response.img_thumb;
 			    }
 			    
 			    //if fail, try one more time
-			    var fail = function (error) {
+			    var uploadError = function (error) {
+			        
+			        //debug
+			        console.log('Erro:' + error);
+			        
 			        if ($scope.retries  == 0) {
+				        //debug
+			            $scope.liveConsole += "vou tentar mais uma vez";
+			           
 			            //try one more time
 			            $scope.retries++;
 			            setTimeout(function() {
@@ -200,34 +262,14 @@
 				        
 				        //reset retries
 			            $scope.retries  = 0;
+			            
 			            //clearCache();
 			            
 			            //debug
-			            $scope.liveConsole += "( " + error + " )";
+			            $scope.liveConsole += "não deu certo mesmo";
 			        }
 			    }
-
-						/*
-							
-							just saving this piece of code for later use if needed
-							
-						  $cordovaFileTransfer.upload(server, filePath, options)
-					      .then(function(result) {
-					        $scope.liveConsole += " -- imagem enviada! -- ";
-					        console.log(JSON.stringify(result));
-					        //$cordovaProgress.hide();
-					      }, function(err) {
-					        $scope.liveConsole += "( " + err + " )";
-					        console.log(JSON.stringify(err));
-					      }, function (progress) {
-					        $scope.progressBar = (progress.loaded / progress.total) * 100;
-					      });
-					   
-		      		}, function (error) {
-			  			//debug
-			  			$scope.liveConsole = " -- erro ao mover o arquivo: " + error + " -- ";
-			  		});
-						 */		
+	
 			} else {
 				//debug and show error message if no photo was taken
 				$scope.liveConsole = "tire uma foto primeiro";
